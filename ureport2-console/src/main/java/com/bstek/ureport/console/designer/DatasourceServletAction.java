@@ -15,27 +15,22 @@
  ******************************************************************************/
 package com.bstek.ureport.console.designer;
 
-import java.beans.PropertyDescriptor;
-import java.io.IOException;
-import java.lang.reflect.Method;
-import java.sql.Connection;
-import java.sql.DatabaseMetaData;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.sql.DataSource;
-
+import com.alibaba.druid.sql.ast.SQLStatement;
+import com.alibaba.druid.sql.ast.statement.SQLSelectStatement;
+import com.alibaba.druid.sql.parser.SQLExprParser;
+import com.alibaba.druid.sql.parser.SQLParserUtils;
+import com.alibaba.druid.sql.parser.SQLStatementParser;
+import com.bstek.ureport.Utils;
+import com.bstek.ureport.build.Context;
+import com.bstek.ureport.console.RenderPageServletAction;
+import com.bstek.ureport.console.exception.ReportDesignException;
+import com.bstek.ureport.definition.dataset.Field;
+import com.bstek.ureport.definition.datasource.BuildinDatasource;
+import com.bstek.ureport.definition.datasource.DataType;
+import com.bstek.ureport.expression.ExpressionUtils;
+import com.bstek.ureport.expression.model.Expression;
+import com.bstek.ureport.expression.model.data.ExpressionData;
+import com.bstek.ureport.expression.model.data.ObjectExpressionData;
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.codehaus.jackson.JsonParseException;
@@ -54,17 +49,27 @@ import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 import org.springframework.jdbc.support.JdbcUtils;
 
-import com.bstek.ureport.Utils;
-import com.bstek.ureport.build.Context;
-import com.bstek.ureport.console.RenderPageServletAction;
-import com.bstek.ureport.console.exception.ReportDesignException;
-import com.bstek.ureport.definition.dataset.Field;
-import com.bstek.ureport.definition.datasource.BuildinDatasource;
-import com.bstek.ureport.definition.datasource.DataType;
-import com.bstek.ureport.expression.ExpressionUtils;
-import com.bstek.ureport.expression.model.Expression;
-import com.bstek.ureport.expression.model.data.ExpressionData;
-import com.bstek.ureport.expression.model.data.ObjectExpressionData;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.sql.DataSource;
+import java.beans.PropertyDescriptor;
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * @author Jacky.gao
@@ -289,6 +294,25 @@ public class DatasourceServletAction extends RenderPageServletAction {
 					return sql;
 				}
 			}
+		}
+		return sql;
+	}
+
+	private String parseSqlNew(String sql, Map<String, Object> parameters) {
+		SQLStatementParser parser = SQLParserUtils.createSQLStatementParser(sql, com.alibaba.druid.util.JdbcUtils.MYSQL);
+		List<SQLStatement> stmtList = parser.parseStatementList();
+		SQLStatement stmt = stmtList.get(0);
+		if (stmt instanceof SQLSelectStatement) {
+			StringBuffer constraintsBuffer = new StringBuffer();
+			Set<String> keys = parameters.keySet();
+			Iterator<String> keyIter = keys.iterator();
+			if (keyIter.hasNext()) {
+				constraintsBuffer.append(keyIter.next()).append(" = ?");
+			}
+			while (keyIter.hasNext()) {
+				constraintsBuffer.append(" AND ").append(keyIter.next()).append(" = ?");
+			}
+			SQLExprParser constraintsParser = SQLParserUtils.createExprParser()
 		}
 		return sql;
 	}
